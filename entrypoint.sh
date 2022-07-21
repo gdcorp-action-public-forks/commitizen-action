@@ -3,7 +3,7 @@
 set -e
 
 if [[ -z $INPUT_GITHUB_TOKEN ]]; then
-  echo 'Missing input "github_token: ${{ secrets.GITHUB_TOKEN }}".'
+  echo 'Missing input "github_token: ${{ secrets.GITHUB_TOKEN }}".' >&2
   exit 1
 fi
 
@@ -26,6 +26,8 @@ echo "${PIP_CMD[@]}"
 "${PIP_CMD[@]}"
 echo "Commitizen version: $(cz version)"
 
+PREV_REV="$(cz version --project)"
+
 CZ_CMD=('cz')
 if [[ $INPUT_NO_RAISE ]]; then
   CZ_CMD+=('--no-raise' "$INPUT_NO_RAISE")
@@ -43,6 +45,9 @@ fi
 if [[ $INPUT_COMMIT == 'false' ]]; then
   CZ_CMD+=('--files-only')
 fi
+if [[ $INPUT_INCREMENT ]]; then
+  CZ_CMD+=('--increment' "$INPUT_INCREMENT")
+fi
 if [[ $INPUT_CHANGELOG_INCREMENT_FILENAME ]]; then
   CZ_CMD+=('--changelog-to-stdout')
   echo "${CZ_CMD[@]}" ">$INPUT_CHANGELOG_INCREMENT_FILENAME"
@@ -53,6 +58,9 @@ else
 fi
 
 REV="$(cz version --project)"
+if [[ $REV == "$PREV_REV" ]]; then
+  INPUT_PUSH='false'
+fi
 echo "REVISION=${REV}" >>"$GITHUB_ENV"
 echo "::set-output name=version::${REV}"
 
@@ -64,10 +72,15 @@ echo "Repository: ${INPUT_REPOSITORY}"
 echo "Actor: ${GITHUB_ACTOR}"
 
 if [[ $INPUT_PUSH == 'true' ]]; then
-  echo "Pushing to branch..."
-  REMOTE_REPO="https://${GITHUB_ACTOR}:${INPUT_GITHUB_TOKEN}@github.com/${INPUT_REPOSITORY}.git"
-  git pull "$REMOTE_REPO" "$INPUT_BRANCH"
-  git push "$REMOTE_REPO" "HEAD:${INPUT_BRANCH}" --tags
+  if [[ $INPUT_MERGE != 'true' && $GITHUB_EVENT_NAME == 'pull_request' ]]; then
+    echo "Refusing to push on pull_request event since that would merge the pull request." >&2
+    echo "You probably want to run on push to your default branch instead." >&2
+  else
+    echo "Pushing to branch..."
+    REMOTE_REPO="https://${GITHUB_ACTOR}:${INPUT_GITHUB_TOKEN}@github.com/${INPUT_REPOSITORY}.git"
+    git pull "$REMOTE_REPO" "$INPUT_BRANCH"
+    git push "$REMOTE_REPO" "HEAD:${INPUT_BRANCH}" --tags
+  fi
 else
   echo "Not pushing"
 fi
