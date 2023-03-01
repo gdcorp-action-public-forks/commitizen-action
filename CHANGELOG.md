@@ -1,3 +1,21 @@
+## 0.16.3 (2023-02-09)
+
+### Fix
+
+- missing `libffi-dev` in `Dockerfile` which breaks third party plugins (#60)
+
+## 0.16.2 (2023-02-06)
+
+### Fix
+
+- change docker image version back to 3.8 (#59)
+
+## 0.16.1 (2023-02-05)
+
+### Fix
+
+- add safe directory to git (#57)
+
 ## 0.16.0 (2023-01-07)
 
 ### Feat
