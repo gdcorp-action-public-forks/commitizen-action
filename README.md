@@ -49,7 +49,7 @@ jobs:
     name: "Bump version and create changelog with commitizen"
     steps:
       - name: Check out
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           token: "${{ secrets.GITHUB_TOKEN }}"
@@ -66,7 +66,7 @@ jobs:
 
 | Name                           | Description                                                                                                                                                                                                                       | Default                                                         |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `github_token`                 | Token for the repo. Can be passed in using `${{ secrets.GITHUB_TOKEN }}` **required**                                                                                                                                             | -                                                               |
+| `github_token`                 | Token for the repo. Can be passed in using `${{ secrets.GITHUB_TOKEN }}`. Required if `push: true`                                                                                                                                | -                                                               |
 | `dry_run`                      | Run without creating commit, output to stdout                                                                                                                                                                                     | false                                                           |
 | `repository`                   | Repository name to push. Default or empty value represents current github repository                                                                                                                                              | current one                                                     |
 | `branch`                       | Destination branch to push changes                                                                                                                                                                                                | Same as the one executing the action by default                 |
@@ -81,15 +81,87 @@ jobs:
 | `commitizen_version`           | Specify the version to be used by commitizen. Eg: `2.21.                                                                                                                                                                          | latest                                                          |
 | `changelog`                    | Create changelog when bumping the version                                                                                                                                                                                         | true                                                            |
 | `no_raise`                     | Don't raise the given comma-delimited exit codes (e.g., no_raise: '20,21'). Use with caution! Open an issue in [commitizen](https://github.com/commitizen-tools/commitizen/issues) if you need help thinking about your workflow. | [21](https://commitizen-tools.github.io/commitizen/exit_codes/) |
-| `increment`                    | Manually specify the desired increment {MAJOR,MINOR,PATCH}                                                                                                                                                                        | -                                                               |
+| `increment`                    | Manually specify the desired increment {MAJOR,MINOR, PATCH}                                                                                                                                                                       | -                                                               |
+| `check_consistency`            | Check consistency among versions defined in commitizen configuration and version_files                                                                                                                                            | `false`                                                         |
+| `gpg_sign`                     | If true, use GPG to sign commits and tags (for git operations). Requires separate setup of GPG key and passphrase in GitHub Actions (e.g. with the action `crazy-max/ghaction-import-gpg`)                                        | `false`                                                         |
+| `debug`                        | Prints debug output to GitHub Actions stdout                                                                                                                                                                                      | `false`                                                         |
 
 ## Outputs
 
 | Name      | Description     |
-|-----------|-----------------|
+| --------- | --------------- |
 | `version` | The new version |
 
-Additionally, the new version is also available as an environment variable under `REVISION`.
+The new version is also available as an environment variable under `REVISION` or you can access using `${{ steps.cz.outputs.version }}`
+
+## Using SSH with deploy keys
+
+1. Create a [deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#deploy-keys) (which is the SSH **public key**)
+2. Add the **private key** as a [Secret](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository) in your repository, e.g: `COMMIT_KEY`
+3. Set up your action
+
+```yaml
+name: Bump version
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    runs-on: ubuntu-latest
+    name: "Bump version and create changelog with commitizen"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ssh-key: "${{ secrets.COMMIT_KEY }}"
+      - name: Create bump and changelog
+        uses: commitizen-tools/commitizen-action@master
+        with:
+          push: false
+      - name: Push using ssh
+        run: |
+          git push origin main --tags
+```
+
+## Creating a Github release
+
+```yaml
+name: Bump version
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    runs-on: ubuntu-latest
+    name: "Bump version and create changelog with commitizen"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+      - name: Create bump and changelog
+        uses: commitizen-tools/commitizen-action@master
+        with:
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          changelog_increment_filename: body.md
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: "body.md"
+          tag_name: ${{ env.REVISION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
 
 ## Troubleshooting
 
@@ -100,7 +172,7 @@ actions [by design][by_design].
 
 To solve it, you must use a personal access token in the checkout and the commitizen steps.
 
-Follow the instructions in [commitizen's documentation][cz-docs-ga]
+Follow the instructions in [commitizen's documentation][cz-docs-ga].
 
 ## I'm not using conventional commits, I'm using my own set of rules on commits
 

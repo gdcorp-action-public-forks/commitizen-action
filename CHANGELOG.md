@@ -1,3 +1,31 @@
+## 0.18.1 (2023-03-28)
+
+### Fix
+
+- Add support for GitHub Enterprise Server (#66)
+
+## 0.18.0 (2023-03-03)
+
+### BREAKING CHANGE
+
+- Remove `use_ssh`. Documentation is in place to deploy using SSH keys
+
+### Fix
+
+- remove use_ssh flag (#65)
+
+## 0.17.1 (2023-03-03)
+
+### Fix
+
+- add openssh to Dockerfile
+
+## 0.17.0 (2023-03-03)
+
+### Feat
+
+- add support for SSH deploy keys (#64)
+
 ## 0.16.3 (2023-02-09)
 
 ### Fix
