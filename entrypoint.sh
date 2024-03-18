@@ -35,6 +35,7 @@ echo "${PIP_CMD[@]}"
 echo "Commitizen version: $(cz version)"
 
 PREV_REV="$(cz version --project)"
+echo "PREVIOUS_REVISION=${PREV_REV}" >>"$GITHUB_ENV"
 
 CZ_CMD=('cz')
 if [[ $INPUT_DEBUG == 'true' ]]; then
@@ -56,6 +57,12 @@ fi
 if [[ $INPUT_PRERELEASE ]]; then
   CZ_CMD+=('--prerelease' "$INPUT_PRERELEASE")
 fi
+if [[ $INPUT_DEVRELEASE ]]; then
+  CZ_CMD+=('--devrelease' "$INPUT_DEVRELEASE")
+fi
+if [[ $INPUT_LOCAL_VERSION == 'true' ]]; then
+  CZ_CMD+=('--local_version')
+fi
 if [[ $INPUT_COMMIT == 'false' ]]; then
   CZ_CMD+=('--files-only')
 fi
@@ -64,6 +71,9 @@ if [[ $INPUT_INCREMENT ]]; then
 fi
 if [[ $INPUT_CHECK_CONSISTENCY ]]; then
   CZ_CMD+=('--check-consistency')
+fi
+if [[ $INPUT_GIT_REDIRECT_STDERR == 'true' ]]; then
+  CZ_CMD+=('--git-output-to-stderr')
 fi
 if [[ $INPUT_CHANGELOG_INCREMENT_FILENAME ]]; then
   CZ_CMD+=('--changelog-to-stdout')
